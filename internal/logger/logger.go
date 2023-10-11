@@ -43,21 +43,18 @@ type options struct {
 	tags map[string]string
 }
 
-var defaultOptions = &options{
-	level:  LevelInfo,
-	format: "json",
-	tags:   nil,
-}
-
 type Option func(*options)
 
 func evaluateOptions(opts []Option) *options {
-	optCopy := &options{}
-	*optCopy = *defaultOptions
-	for _, o := range opts {
-		o(optCopy)
+	opt := &options{
+		level:  LevelInfo,
+		format: "json",
+		tags:   nil,
 	}
-	return optCopy
+	for _, o := range opts {
+		o(opt)
+	}
+	return opt
 }
 
 // Create a slog.Handler based on the options given in opt.
