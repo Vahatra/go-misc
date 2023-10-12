@@ -32,6 +32,7 @@ func EncodeError(ctx context.Context, w http.ResponseWriter, err error) {
 		panic("error: err cannot be nil")
 	}
 	code := http.StatusInternalServerError
+	// log the error by adding the msg to the logEntry
 	LogEntryError(ctx, err.Error())
 
 	var ierr *e.Error
