@@ -32,20 +32,25 @@ func EncodeError(ctx context.Context, w http.ResponseWriter, err error) {
 		panic("error: err cannot be nil")
 	}
 	code := http.StatusInternalServerError
-	var msg string
-	var ie *e.Error
-	if errors.As(err, &ie) {
-		code = ie.ToHTTPStatus()
-		if ie.Error() != "" {
-			msg = ie.Error()
-		}
-	}
-	w.WriteHeader(code)
-	if msg != "" {
+	LogEntryError(ctx, err.Error())
+
+	var ierr *e.Error
+	if errors.As(err, &ierr) {
+		code = e.HttpStatus(ierr.Code())
+		w.WriteHeader(code)
 		json.NewEncoder(w).Encode(struct {
 			Err string `json:"error,omitempty"`
-		}{Err: msg})
+		}{Err: ierr.Error()})
+		return
 	}
-	// log the error by adding the msg to the logEntry
-	LogEntryError(ctx, err.Error())
+
+	var ierrs *e.Errors
+	if errors.As(err, &ierrs) {
+		code = e.HttpStatus(ierrs.Code())
+		w.WriteHeader(code)
+		json.NewEncoder(w).Encode(struct {
+			Errs []string `json:"errors,omitempty"`
+		}{Errs: ierrs.Errors()})
+		return
+	}
 }

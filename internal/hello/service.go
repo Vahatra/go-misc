@@ -26,13 +26,13 @@ func NewService(l *slog.Logger, v *validator.Validation, c *cache.Cache, r Hello
 }
 
 func (s *service) Say(ctx context.Context, id string) (string, error) {
-	err := s.v.Struct(struct {
+	errs := s.v.Struct(struct {
 		Id string `validate:"required"`
 	}{
 		Id: id,
 	})
-	if err != nil {
-		return "", fmt.Errorf("get message: %w", e.Wrap(e.CodeInvalidArgument, err))
+	if len(errs) > 0 {
+		return "", fmt.Errorf("get message: %w", e.WrapS(e.CodeInvalidArgument, errs...))
 	}
 
 	msg, err := s.r.Get(id)

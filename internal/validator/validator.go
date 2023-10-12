@@ -6,17 +6,17 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type ValidationError struct {
-	s string
-}
-
-func (v *ValidationError) Error() string {
-	return v.s
-}
-
 // Validation contains
 type Validation struct {
 	validate *validator.Validate
+}
+
+type ValidationError struct {
+	validator.FieldError
+}
+
+func (v *ValidationError) Error() string {
+	return fmt.Sprintf("%s %s", v.FieldError.Field(), toMsg(v.FieldError))
 }
 
 func NewValidator() *Validation {
@@ -26,24 +26,24 @@ func NewValidator() *Validation {
 	return &Validation{v}
 }
 
-func (v *Validation) Struct(i interface{}) error {
+func (v *Validation) Struct(i interface{}) []error {
 	err := v.validate.Struct(i)
 	if err == nil {
 		return nil
 	}
-	errs := err.(validator.ValidationErrors)
-
-	if len(errs) == 0 {
+	ferrs := err.(validator.ValidationErrors)
+	if len(ferrs) == 0 {
 		return nil
 	}
 
-	var b []byte
-	b = append(b, fmt.Sprintf("%q %s", errs[0].Field(), toMsg(errs[0]))...)
-	for _, fe := range errs[1:] {
-		b = append(b, fmt.Sprintf(", %q %s", fe.Field(), toMsg(fe))...)
+	errs := make([]error, 0, len(ferrs))
+	for _, ferr := range ferrs {
+		// cast the FieldError into our ValidationError and append to the slice
+		verr := &ValidationError{ferr.(validator.FieldError)}
+		errs = append(errs, verr)
 	}
 
-	return &ValidationError{s: string(b)}
+	return errs
 }
 
 func validateHello(fl validator.FieldLevel) bool {
