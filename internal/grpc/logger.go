@@ -45,6 +45,7 @@ func LoggerUnaryServerInterceptor(opts ...LoggerOption) grpc.UnaryServerIntercep
 
 		t := time.Now()
 		defer func() {
+			le.error(err)
 			le.log(ctx, info.FullMethod, time.Since(t), err)
 		}()
 
@@ -53,9 +54,9 @@ func LoggerUnaryServerInterceptor(opts ...LoggerOption) grpc.UnaryServerIntercep
 }
 
 // LogEntryAttr helper func for setting slog.Attr to the logEntry.
-func LogEntryAttr(ctx context.Context, attr ...any /* slog.Attr */) {
+func LogEntryAttr(ctx context.Context, a ...any /* slog.Attr */) {
 	if entry, ok := ctx.Value(ContextKeyLogEntry).(*logEntry); ok {
-		entry.l = entry.l.With(attr...)
+		entry.l = entry.l.With(a...)
 	}
 }
 
@@ -74,10 +75,13 @@ type logEntry struct {
 	leak      bool
 }
 
-func (le *logEntry) log(ctx context.Context, method string, d time.Duration, err error) {
-	if err != io.EOF && err != nil {
+func (le *logEntry) error(err error) {
+	if err != nil && err != io.EOF {
 		le.l = le.l.With(slog.String("error", err.Error()))
 	}
+}
+
+func (le *logEntry) log(ctx context.Context, method string, d time.Duration, err error) {
 	reqID, ok := ctx.Value(ContextKeyRequestID).(string)
 	if ok {
 		le.l = le.l.With(slog.String("id", reqID))

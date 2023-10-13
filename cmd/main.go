@@ -119,6 +119,7 @@ func main() {
 		grpcsrv := grpc.NewServer(
 			grpc.ChainUnaryInterceptor(
 				grpcmw.RequestIDUnaryServerInterceptor, // before logger
+				grpcmw.ErrorUnaryServerInterceptor,     // before logger
 				grpcmw.LoggerUnaryServerInterceptor(
 					grpcmw.WithLogger(grpcl),
 					grpcmw.WithConcise(true),
@@ -128,7 +129,7 @@ func main() {
 				// 	"very-insercure": {},
 				// }),
 				),
-				grpcmw.RecoverUnaryServerInterceptor, // after error
+				grpcmw.RecoverUnaryServerInterceptor, // after logger
 			),
 		)
 		pb.RegisterHelloServiceServer(grpcsrv, hellogrpc.NewServer(grpcl, helloService))

@@ -36,11 +36,12 @@ func Logger(opts ...LoggerOption) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ww := &wWriter{w, false, http.StatusOK, 0}
-			le := &logEntry{o.l, o.concise, o.sensitive, o.leak}
+			le := &logEntry{o.l, o.concise, o.sensitive, o.leak, nil}
 			r = r.WithContext(context.WithValue(r.Context(), ContextKeyLogEntry, le))
 
 			t := time.Now()
 			defer func() {
+				le.error()
 				le.req(r)
 				le.resp(ww)
 				le.log(ww.code, time.Since(t))
@@ -58,10 +59,10 @@ func LogEntryAttr(ctx context.Context, attr ...any /* slog.Attr */) {
 	}
 }
 
-// LogEntryError helper func for adding error message to the log.
-func LogEntryError(ctx context.Context, msg string) {
+// LogEntryError helper func for adding error to the log.
+func LogEntryError(ctx context.Context, err error) {
 	if entry, ok := ctx.Value(ContextKeyLogEntry).(*logEntry); ok {
-		entry.l = entry.l.With(slog.String("error", msg))
+		entry.err = err
 	}
 }
 
@@ -70,6 +71,13 @@ type logEntry struct {
 	concise   bool
 	sensitive map[string]struct{}
 	leak      bool
+	err       error
+}
+
+func (le *logEntry) error() {
+	if le.err != nil {
+		le.l = le.l.With(slog.String("error", le.err.Error()))
+	}
 }
 
 func (le *logEntry) req(r *http.Request) {

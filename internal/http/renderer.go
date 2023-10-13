@@ -33,7 +33,7 @@ func EncodeError(ctx context.Context, w http.ResponseWriter, err error) {
 	}
 	code := http.StatusInternalServerError
 	// log the error by adding the msg to the logEntry
-	LogEntryError(ctx, err.Error())
+	LogEntryError(ctx, err)
 
 	var ierr *e.Error
 	if errors.As(err, &ierr) {
